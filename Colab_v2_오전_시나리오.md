@@ -10,13 +10,22 @@
 
 ```mermaid
 flowchart TD
-	source["0–1. 데이터 확인 · 날짜순 분할"] --> explore["2. 장비별 추세 · 원본값 · 레시피 탐색"]
-	explore --> hypothesis["3. 원래 값과 flow_gap 비교 · 가설 기록"]
-	hypothesis --> features["4. 웨이퍼별 모델 입력과 정답 구성"]
-	features --> select["5. 중간 10일에서 모델과 입력 비교"]
-	select --> decision{"설정을 확정했나요?"}
-	decision -->|아니요| hypothesis
-	decision -->|예| test["6. 마지막 10일에서 한 번만 평가"]
+	source["0. 첫 5행·결측·LOW 라벨 확인"] --> split["1. 날짜순 분할: 학습 25일 / 선택 10일 / 최종 10일"]
+	split --> overview["2. 앞 25일: 센서 8개와 장비 4대의 일별 중앙값 그리기"]
+	overview --> raw["2.1–2.2. S01 선 겹침을 표에서 확인하고 원본값 분포 보기"]
+	raw --> recipe["2.3. 레시피별 표에서 S01과 비교할 센서 찾기"]
+	recipe --> equipment["2.4. 첫·마지막 5일의 변화량으로 비교할 장비 고르기"]
+	equipment --> configure["2.5. 센서·그래프에 표시할 장비·USE_GAP 설정"]
+	configure --> hypothesis["3. 같은 장비·날짜에서 원래 센서값과 flow_gap 그래프 비교"]
+	hypothesis --> features["4. 정답 y와 센서 입력 X 분리: USE_GAP으로 차이 열 선택"]
+	features --> train["5. 앞 25일: 결측 대체·필요한 표준화와 모델 3개 학습"]
+	train --> rank["중간 10일: LOW 확률을 매겨 모델별 상위 67장 선택"]
+	rank --> select["실제 적중 수와 Precision@67 비교 · 동률이면 AP 비교"]
+	select --> decision{"입력과 모델을 확정했나요?"}
+	decision -->|아니요: 센서 조합 또는 USE_GAP 변경| configure
+	decision -->|예: 마지막 10일까지 설정 유지| test["6. 고른 모델을 다시 학습하지 않고 최종 평가"]
+	test --> readout["정밀도를 무작위 기준과 비교하고 재현율·누락 해석"]
+	readout --> handoff["오후: 팀 가설을 연습 데이터에서 검증한 뒤 별도 배포 데이터에 적용"]
 ```
 
 | 노트북 번호 | 할 일 | 남길 근거 |
